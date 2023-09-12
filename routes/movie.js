@@ -6,7 +6,6 @@ require("dotenv").config();
 const axios = require("axios");
 const Movie = require("./models/Movie");
 const AppData = require("./models/AppData");
-const youtubedl = require('youtube-dl-exec')
 
 
 const apiKey = process.env.KEY; // TMDB API key
@@ -17,91 +16,6 @@ const apiKey = process.env.KEY; // TMDB API key
 router.get("/", (req, res) => {
     res.send("Hello -User");
 });
-
-
-
-// Add a new movie
-router.post("/add-movie", async (req, res) => {
-    try {
-      const { tmdbMovieId, videoUrl } = req.body;
-  
-      // Fetch movie data from TMDB API
-      const tmdbMovieUrl = `https://api.themoviedb.org/3/movie/${tmdbMovieId}?api_key=${apiKey}&language=en-US`;
-  
-      const response = await axios.get(tmdbMovieUrl);
-      const movieData = response.data;
-  
-      const tmdbImagesUrl = `https://api.themoviedb.org/3/movie/${tmdbMovieId}/images?api_key=${apiKey}`;
-      const imagesResponse = await axios.get(tmdbImagesUrl);
-      const imagesData = imagesResponse.data;
-      
-    
-      // Extract the file_path of the first poster (if available)
-        let posterPath = null;
-        if (imagesData.posters && imagesData.posters.length > 0) {
-         posterPath = imagesData.posters[0].file_path;
-            }
-
-            //Get the yt trailer of the movie
-            const tmdbVideosUrl = `https://api.themoviedb.org/3/movie/${tmdbMovieId}/videos?api_key=${apiKey}`;
-            const videosResponse = await axios.get(tmdbVideosUrl);
-      
-            const results = videosResponse.data.results.filter(item => {
-            const lowerCaseName = item.name.toLowerCase();
-            
-            return (
-                item.type === "Trailer" &&
-                (lowerCaseName.includes("official trailer") || lowerCaseName.includes("main trailer")) &&
-                lowerCaseName.split(" ").length < 5
-              );
-             
-          });
-
-      
-            const ytId = results[0]['key'];
-            console.log(`working id: ${ytId}`);
-
-            const ytvideoLink = await getYtVideo(ytId);
-            console.log(`working link: ${ytvideoLink}`);
-  
-
-
-      // Create a new movie document in MongoDB
-      const newMovie = new Movie({
-        id: tmdbMovieId,
-        videoUrl,
-        title: movieData.title,
-        backdropPath: movieData.backdrop_path,
-        overview: movieData.overview,
-        genres: movieData.genres.map((genre) => genre.name), // Extract genre names
-        homepage: movieData.homepage,
-        popularity: movieData.popularity,
-        productionCompanies: movieData.production_companies.map((company) => company.name), // Extract company names
-        productionCountries: movieData.production_countries.map((country) => country.name), // Extract country names
-        revenue: movieData.budget, // Assuming budget corresponds to revenue
-        runtime: movieData.runtime,
-        spokenLanguages: movieData.spoken_languages.map((language) => language.english_name), // Extract English language names
-        status: movieData.status,
-        tagline: movieData.tagline,
-        voteAverage: movieData.vote_average,
-        voteCount: movieData.vote_count,
-        posterPath: posterPath,
-        ytLink: ytvideoLink,
-        ytID: ytId
-    });
-
-    
-  
-      // Save the movie document
-      await newMovie.save();
-      console.log(`working movie added`);
-  
-      res.status(201).json({ message: "Movie added successfully", movie: newMovie });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
 
 
 // Add a new slider to the appData collection
@@ -207,68 +121,9 @@ router.get("/movies/:id", async (req, res) => {
     }
   }); 
 
-// Define a route to fetch youtube video link
-
-router.get("/youtube/:id", async (req, res) => {
-  try {
-    // Get the YouTube video ID from the query parameters
-    const videoId = req.params.id;
-    if (!videoId) {
-      return res.status(400).json({ error: 'Video ID is required' });
-    }
-
-    const link = getYtVideo(videoId);
-    
-    res.json(link);
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 
 
-router.get("/debug", async (req, res) => {
-  try {
-    
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 
-
-async function getYtVideo(id) {
-  return new Promise((resolve, reject) => {
-    const videoUrl = `http://www.youtube.com/watch?v=${id}`;
-
-    youtubedl(videoUrl, {
-      dumpSingleJson: true,
-      noCheckCertificates: true,
-      noWarnings: true,
-      preferFreeFormats: true,
-      addHeader: [
-        'referer:youtube.com',
-        'user-agent:googlebot'
-      ]
-    }).then(output => {
-      const desiredFormatId = "137"; // Convert it to a string since "format_id" is a string in your JSON
-      const format = output.formats.find(item => item.format_id === desiredFormatId);
-
-      if (format) {
-        // Resolve with the URL when found
-        console.log(`${format['url']}`);
-        resolve(format['url']);
-      } else {
-        // Reject with an error when format is not found
-        reject(new Error("Format not found"));
-      }
-    }).catch(error => {
-      // Reject with an error if there's any problem
-      reject(error);
-    });
-  });
-}
 
 
 module.exports = router;

@@ -87,19 +87,19 @@ router.get("/fetch", async (req, res) => {
   });
 
   
-// Define a route to fetch all movies
+// Define a route to fetch all movies with only id and title
 router.get("/movies", async (req, res) => {
-    try {
-      // Use the Movie model to query the database for all movies
-      const movies = await Movie.find();
-  
-      // Send the list of movies as a JSON response
-      res.json(movies);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
+  try {
+    // Use the Movie model to query the database for all movies
+    const movies = await Movie.find({}, { _id: 0, id: 1, title: 1 });
+
+    // Send the list of movies with only id and title as a JSON response
+    res.json(movies);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // Define a route to fetch movie details by ID
 router.get("/movies/:id", async (req, res) => {

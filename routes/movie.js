@@ -91,7 +91,7 @@ router.get("/fetch", async (req, res) => {
 router.get("/movies", async (req, res) => {
   try {
     // Use the Movie model to query the database for all movies
-    const movies = await Movie.find({}, { _id: 0, id: 1, title: 1 });
+    const movies = await Movie.find({}, { _id: 0, id: 1, title: 1, posterPath: 1});
 
     // Send the list of movies with only id and title as a JSON response
     res.json(movies);

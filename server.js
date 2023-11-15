@@ -29,11 +29,11 @@ app.listen(PORT,function() {
 });
 
 app.get("/",function(request, response) {
-    response.send('Hello, welcome to Movies + Server');
+    response.send('Hello, welcome to Movies+ Server');
 });
 
 app.get(`${apiDir}`,function(request, response) {
-    response.send('Hello, welcome to Movies + Server');
+    response.send('Hello, welcome to Movies+ Server');
 });
 
 // Function to send a traffic request to your server

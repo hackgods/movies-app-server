@@ -87,19 +87,29 @@ router.get("/fetch", async (req, res) => {
   });
 
   
-// Define a route to fetch all movies with only id and title
+// Define a route to fetch all movies with id, title, posterPath, genres, voteAverage, and voteCount
 router.get("/movies", async (req, res) => {
   try {
     // Use the Movie model to query the database for all movies
-    const movies = await Movie.find({}, { _id: 0, id: 1, title: 1, posterPath: 1});
+    const movies = await Movie.find({}, { _id: 0, id: 1, title: 1, posterPath: 1, genres: 1, voteAverage: 1, voteCount: 1 });
 
-    // Send the list of movies with only id and title as a JSON response
-    res.json(movies);
+    // Calculate the weighted average for each movie
+    const weightedMovies = movies.map(movie => {
+      const weightedAverage = (movie.voteAverage * movie.voteCount) + 10; // Adjust the constant as needed
+      return { ...movie.toObject(), weightedAverage };
+    });
+
+    // Sort movies based on the weighted average in descending order
+    const rankedMovies = weightedMovies.sort((a, b) => b.weightedAverage - a.weightedAverage);
+
+    // Send the list of movies with id, title, posterPath, genres, voteAverage, and voteCount as a JSON response
+    res.json(rankedMovies);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 // Define a route to fetch movie details by ID
 router.get("/movies/:id", async (req, res) => {

@@ -136,4 +136,22 @@ router.get("/movies/:id", async (req, res) => {
   }); 
 
 
+// Define a route to search for movies by name
+router.get("/search", async (req, res) => {
+  try {
+    const query = req.query.q.toLowerCase();
+
+    // Use the Movie model to find movies by name in the database
+    const movies = await Movie.find({
+      title: { $regex: new RegExp(query), $options: 'i' }, // Case-insensitive search
+    }).exec();
+
+    // Send the list of matching movies as a JSON response
+    res.json({ results: movies });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 module.exports = router;

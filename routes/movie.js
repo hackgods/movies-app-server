@@ -91,11 +91,15 @@ router.get("/fetch", async (req, res) => {
 router.get("/movies", async (req, res) => {
   try {
     // Use the Movie model to query the database for all movies
-    const movies = await Movie.find({}, { _id: 0, id: 1, title: 1, posterPath: 1, genres: 1, voteAverage: 1, voteCount: 1 });
+    const movies = await Movie.find({}, { _id: 0, id: 1, title: 1, posterPath: 1, genres: 1, voteAverage: 1, voteCount: 1, popularity: 1 });
 
     // Calculate the weighted average for each movie
     const weightedMovies = movies.map(movie => {
-      const weightedAverage = (movie.voteAverage * movie.voteCount) + 10; // Adjust the constant as needed
+      // Normalize popularity to be on a scale of 0 to 10
+      const normalizedPopularity = (movie.popularity / 4000) * 10;
+      // Weighted average formula with 80% for popularity and 20% for vote average
+      const weightedAverage = (0.8 * normalizedPopularity) + (0.2 * movie.voteAverage);
+
       return { ...movie.toObject(), weightedAverage };
     });
 
@@ -130,10 +134,6 @@ router.get("/movies/:id", async (req, res) => {
       res.status(500).json({ error: "Internal server error" });
     }
   }); 
-
-
-
-
 
 
 module.exports = router;

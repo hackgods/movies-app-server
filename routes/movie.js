@@ -144,7 +144,7 @@ router.get("/search", async (req, res) => {
     // Use the Movie model to find movies by name in the database
     const movies = await Movie.find({
       title: { $regex: new RegExp(query), $options: 'i' }, // Case-insensitive search
-    }).exec();
+    },{ _id: 0, id: 1, title: 1, posterPath: 1, overview: 1}).exec();
 
     // Send the list of matching movies as a JSON response
     res.json({ results: movies });
@@ -152,6 +152,6 @@ router.get("/search", async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
-});
+}); 
 
 module.exports = router;

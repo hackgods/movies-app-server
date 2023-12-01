@@ -1,5 +1,6 @@
 const express = require('express');
 const movieRoutes = require('./routes/movie.js');
+const userRoutes = require('./routes/user.js');
 const axios = require('axios'); // Import axios for sending requests
 var bodyParser = require('body-parser');
 require("dotenv").config();
@@ -22,6 +23,7 @@ app.use(cors());
 
 
 app.use(`${apiDir}/movies`,movieRoutes);
+app.use(`${apiDir}/users`,userRoutes);
 
 
 app.listen(PORT,function() {

@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const autoIncrement = require('mongoose-plugin-autoinc');
 
 const userSchema = new mongoose.Schema({
   uid: {

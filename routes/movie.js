@@ -55,36 +55,74 @@ router.post('/add-slider', async (req, res) => {
 
 
 // Fetch specified field or the entire appData document
+// router.get("/fetch", async (req, res) => {
+//     try {
+//       // For example, you might use an ID or some other unique identifier
+//       const appDataDocument = await AppData.findOne();
+  
+//       if (!appDataDocument) {
+//         return res.status(404).json({ error: "AppData not found" });
+//       }
+  
+//       // Extract the field name from the query parameters
+//       const fieldName = req.query.fieldName;
+  
+//       // If a field name is specified, return only that field, otherwise return the entire document
+//       if (fieldName) {
+//         // Check if the specified field exists in the document
+//         if (appDataDocument[fieldName] !== undefined) {
+//           const fieldValue = appDataDocument[fieldName];
+//           return res.status(200).json({ [fieldName]: fieldValue });
+//         } else {
+//           return res.status(400).json({ error: "Field not found in the document" });
+//         }
+//       } else {
+//         // No field name specified, return the entire document
+//         return res.status(200).json(appDataDocument);
+//       }
+//     } catch (error) {
+//       console.error(error);
+//       res.status(500).json({ error: "Internal server error" });
+//     }
+//   });
 router.get("/fetch", async (req, res) => {
-    try {
-      // For example, you might use an ID or some other unique identifier
-      const appDataDocument = await AppData.findOne();
-  
-      if (!appDataDocument) {
-        return res.status(404).json({ error: "AppData not found" });
-      }
-  
-      // Extract the field name from the query parameters
-      const fieldName = req.query.fieldName;
-  
-      // If a field name is specified, return only that field, otherwise return the entire document
-      if (fieldName) {
-        // Check if the specified field exists in the document
-        if (appDataDocument[fieldName] !== undefined) {
-          const fieldValue = appDataDocument[fieldName];
-          return res.status(200).json({ [fieldName]: fieldValue });
-        } else {
-          return res.status(400).json({ error: "Field not found in the document" });
-        }
-      } else {
-        // No field name specified, return the entire document
-        return res.status(200).json(appDataDocument);
-      }
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Internal server error" });
+  try {
+    const fieldName = req.query.fieldName || "all"; // Default to "all" if no field name is specified
+    const cacheKey = `appData:${fieldName}`; // Unique key for caching
+
+    // Try to fetch the response from Redis cache first
+    const cachedData = await redisClient.get(cacheKey);
+    if (cachedData) {
+      return res.status(200).json(JSON.parse(cachedData));
     }
-  });
+
+    // If not in cache, fetch from database
+    const appDataDocument = await AppData.findOne();
+    if (!appDataDocument) {
+      return res.status(404).json({ error: "AppData not found" });
+    }
+
+    if (fieldName !== "all") {
+      // Return only specified field
+      if (appDataDocument[fieldName] !== undefined) {
+        const fieldValue = appDataDocument[fieldName];
+        // Cache the field value
+        await redisClient.setEx(cacheKey, 604800, JSON.stringify({ [fieldName]: fieldValue })); // Cache for 1 week
+        return res.status(200).json({ [fieldName]: fieldValue });
+      } else {
+        return res.status(400).json({ error: "Field not found in the document" });
+      }
+    } else {
+      // Cache the entire document
+      await redisClient.setEx(cacheKey, 604800, JSON.stringify(appDataDocument)); // Cache for 1 week
+      return res.status(200).json(appDataDocument);
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
   
 // Define a route to fetch all movies with id, title, posterPath, genres, voteAverage, and voteCount
@@ -154,10 +192,13 @@ router.get("/movies/:id", async (req, res) => {
       if (!movie) {
         return res.status(404).json({ error: "Movie not found" });
       }
-      // Store the movie details in Redis cache, consider setting an expiry
-      await redisClient.setEx(movieCacheKey, 604800, JSON.stringify(movie)); // Cache expires in 1 week, 7 days
+
       console.log("Movie data retrieved from DB");
       res.json(movie);
+
+      // Store the movie details in Redis cache, consider setting an expiry
+      await redisClient.setEx(movieCacheKey, 604800, JSON.stringify(movie)); // Cache expires in 1 week, 7 days
+
     }
   } catch (error) {
     console.error(error);

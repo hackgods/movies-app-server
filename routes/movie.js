@@ -116,24 +116,56 @@ router.get("/movies", async (req, res) => {
 
 
 // Define a route to fetch movie details by ID
+// router.get("/movies/:id", async (req, res) => {
+//     try {
+//       const movieId = req.params.id;
+  
+//       // Use the Movie model to find a movie by ID in the database
+//       const movie = await Movie.findOne({ id: movieId }).exec();
+  
+//       if (!movie) {
+//         return res.status(404).json({ error: "Movie not found" });
+//       }
+  
+//       // Send the movie details as a JSON response
+//       res.json(movie);
+//     } catch (error) {
+//       console.error(error);
+//       res.status(500).json({ error: "Internal server error" });
+//     }
+//   }); 
 router.get("/movies/:id", async (req, res) => {
-    try {
-      const movieId = req.params.id;
-  
-      // Use the Movie model to find a movie by ID in the database
+  try {
+    const movieId = req.params.id;
+    const movieCacheKey = `movie:${movieId}`; // Corrected template string usage
+
+    console.log(`Searching for ${movieId}`);
+
+
+    // Try to fetch the movie details from Redis cache
+    const cachedMovie = await redisClient.get(movieCacheKey);
+
+    if (cachedMovie) {
+      console.log("Movie data retrieved from CACHE");
+      return res.json(JSON.parse(cachedMovie));
+    } else {
+      // Fetch from database if not in cache
       const movie = await Movie.findOne({ id: movieId }).exec();
-  
       if (!movie) {
         return res.status(404).json({ error: "Movie not found" });
       }
-  
-      // Send the movie details as a JSON response
+      // Store the movie details in Redis cache, consider setting an expiry
+      await redisClient.setEx(movieCacheKey, 604800, JSON.stringify(movie)); // Cache expires in 1 week, 7 days
+      console.log("Movie data retrieved from DB");
       res.json(movie);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Internal server error" });
     }
-  }); 
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
 
 
 // Define a route to search for movies by name

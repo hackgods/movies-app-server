@@ -6,7 +6,7 @@ require("dotenv").config();
 const axios = require("axios");
 const Movie = require("./models/Movie");
 const AppData = require("./models/AppData");
-
+const redisClient = require("../utils/redisClient")
 
 const apiKey = process.env.KEY; // TMDB API key
 
